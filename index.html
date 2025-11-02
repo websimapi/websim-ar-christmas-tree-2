@@ -494,86 +494,55 @@ class SimpleStorage {
     constructor() {
         this.presents = JSON.parse(localStorage.getItem('christmasPresents') || '[]');
         this.ornaments = JSON.parse(localStorage.getItem('christmasOrnaments') || '[]');
-        this.subscribers = { presents: [], ornaments: [] };
-    }
-
-    subscribe(collection, callback) {
-        if (this.subscribers[collection]) {
-            this.subscribers[collection].push(callback);
-        }
-    }
-
-    notify(collection) {
-        if (this.subscribers[collection]) {
-            const data = collection === 'presents' ? this.presents : this.ornaments;
-            this.subscribers[collection].forEach(callback => callback(data));
-        }
     }
 
     savePresents() {
         localStorage.setItem('christmasPresents', JSON.stringify(this.presents));
-        this.notify('presents');
     }
 
     saveOrnaments() {
         localStorage.setItem('christmasOrnaments', JSON.stringify(this.ornaments));
-        this.notify('ornaments');
     }
 
-    create(collection, item) {
-        return new Promise((resolve) => {
-            item.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-            if (collection === 'presents') {
-                item.fromPerson = 'user'; // Simplified for local storage
-                this.presents.push(item);
-                this.savePresents();
-            } else if (collection === 'ornaments') {
-                this.ornaments.push(item);
-                this.saveOrnaments();
-            }
-            resolve(item);
-        });
+    addPresent(present) {
+        present.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        present.fromPerson = 'user'; // Simplified for local storage
+        this.presents.push(present);
+        this.savePresents();
     }
     
-    getList(collection) {
-        return collection === 'presents' ? this.presents : this.ornaments;
+    addOrnament(ornament) {
+        ornament.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        this.ornaments.push(ornament);
+        this.saveOrnaments();
     }
 
-    update(collection, id, updates) {
-         return new Promise((resolve, reject) => {
-            if (collection === 'presents') {
-                const index = this.presents.findIndex(p => p.id === id);
-                if (index !== -1) {
-                    this.presents[index] = { ...this.presents[index], ...updates };
-                    this.savePresents();
-                    resolve(this.presents[index]);
-                } else {
-                    reject(new Error('Present not found'));
-                }
-            } else {
-                 reject(new Error('Update not supported for this collection'));
-            }
-        });
+    getPresents() {
+        return this.presents;
+    }
+
+    getOrnaments() {
+        return this.ornaments;
+    }
+
+    updatePresent(id, updates) {
+        const index = this.presents.findIndex(p => p.id === id);
+        if (index !== -1) {
+            this.presents[index] = { ...this.presents[index], ...updates };
+            this.savePresents();
+            return this.presents[index];
+        }
+        return null;
     }
 }
-const room = { collection: (name) => {
-    if (!window.simpleStorage) {
-        window.simpleStorage = new SimpleStorage();
-    }
-    const collectionName = name;
-    return {
-        create: (item) => window.simpleStorage.create(collectionName, item),
-        update: (id, updates) => window.simpleStorage.update(collectionName, id, updates),
-        getList: () => window.simpleStorage.getList(collectionName),
-        subscribe: (callback) => window.simpleStorage.subscribe(collectionName, callback)
-    };
-}, party: { client: { username: 'user' } } };
 
+const storage = new SimpleStorage();
+const currentUsername = 'user';
 
 let treeLatitude = null;
 let treeLongitude = null;
 
-async function addPresent() {
+function addPresent() {
   const toValue = document.getElementById('toInput').value.toLowerCase();
   const messageValue = document.getElementById('messageInput').value;
   const openDateValue = document.getElementById('openDateInput').value;
@@ -583,7 +552,7 @@ async function addPresent() {
     alert('Please fill in the To field');
     return;
   }
-  const fromValue = room.party.client.username.toLowerCase();
+  const fromValue = currentUsername.toLowerCase();
   const angle = Math.random() * Math.PI * 2;
   const radius = Math.random() * 2.5 + 1.5;
   const x = Math.cos(angle) * radius;
@@ -594,7 +563,7 @@ async function addPresent() {
     depth: Math.random() * 0.3 + 0.2
   };
   try {
-    await room.collection('presents').create({
+    storage.addPresent({
       fromPerson: fromValue,
       toPerson: toValue,
       message: messageValue,
@@ -608,6 +577,9 @@ async function addPresent() {
       opened: false,
       openDate: openDateValue
     });
+    updatePresentsDisplay(storage.getPresents());
+    updatePresentsUI();
+
     document.getElementById('toInput').value = '';
     document.getElementById('messageInput').value = '';
     document.getElementById('openDateInput').value = 'anytime';
@@ -645,7 +617,7 @@ function renderPresent(present) {
   box.setAttribute('depth', present.size.depth);
   box.setAttribute('color', present.color);
   box.setAttribute('position', `0 ${present.size.height / 2} 0`);
-  if (present.toPerson === room.party.client.username) {
+  if (present.toPerson === currentUsername) {
     box.setAttribute('class', 'clickable');
     if (!present.opened && !canOpenPresent(present)) {
       box.setAttribute('title', getOpenDateMessage(present));
@@ -720,15 +692,17 @@ function isValidUrl(string) {
   }
 }
 async function openPresent(present) {
-  if (present.toPerson.toLowerCase() !== room.party.client.username.toLowerCase()) return;
+  if (present.toPerson.toLowerCase() !== currentUsername.toLowerCase()) return;
   try {
-    await room.collection('presents').update(present.id, {
+    storage.updatePresent(present.id, {
       ...present,
       opened: true
     });
     if (isValidUrl(present.message)) {
       window.open(present.message, '_blank');
     }
+    updatePresentsDisplay(storage.getPresents());
+    updatePresentsUI();
   } catch (error) {
     console.error('Error opening present:', error);
     alert('Failed to open present. Please try again.');
@@ -737,10 +711,10 @@ async function openPresent(present) {
 function updatePresentsUI() {
   const sentContainer = document.getElementById('sentPresents');
   sentContainer.innerHTML = '';
-  const presents = room.collection('presents').getList() || [];
+  const presents = storage.getPresents() || [];
   const filteredPresents = presents.filter(present => {
     if (currentFilter === 'openable') {
-      return present.toPerson.toLowerCase() === room.party.client.username.toLowerCase() && (canOpenPresent(present) && !present.opened || present.opened);
+      return present.toPerson.toLowerCase() === currentUsername.toLowerCase() && (canOpenPresent(present) && !present.opened || present.opened);
     }
     return true;
   });
@@ -764,7 +738,7 @@ function createPresentListItem(present) {
                 <div><strong>Opens:</strong> ${getOpenDateMessage(present)}</div>
             `;
   div.appendChild(info);
-  if (present.toPerson.toLowerCase() === room.party.client.username.toLowerCase()) {
+  if (present.toPerson.toLowerCase() === currentUsername.toLowerCase()) {
     if (!present.opened) {
       const openButton = document.createElement('button');
       openButton.className = 'open-button';
@@ -823,18 +797,16 @@ function openPresentAnimation(present) {
     }
   }, 1000);
 }
-function setupPeriodicPresentsCheck() {
-  const presents = room.collection('presents').getList() || [];
-  updatePresentsDisplay(presents);
+function setupInitialDisplays() {
+  updatePresentsDisplay(storage.getPresents());
+  updateOrnamentsDisplay(storage.getOrnaments());
   updatePresentsUI();
 }
 function refreshPresents() {
-  const presents = room.collection('presents').getList() || [];
-  updatePresentsDisplay(presents);
+  updatePresentsDisplay(storage.getPresents());
   updatePresentsUI();
 }
-room.collection('presents').subscribe(updatePresentsDisplay);
-room.collection('presents').subscribe(updatePresentsUI);
+
 function renderOrnament(ornament) {
   const ornamentsContainer = document.querySelector('#ornamentsContainer');
   const ornamentEntity = document.createElement(`a-${ornament.shape || 'sphere'}`);
@@ -857,7 +829,7 @@ function renderOrnament(ornament) {
   ornamentEntity.setAttribute('position', `${ornament.position.x} ${ornament.position.y} ${ornament.position.z}`);
   ornamentsContainer.appendChild(ornamentEntity);
 }
-async function addOrnament() {
+function addOrnament() {
   const color = document.getElementById('ornamentColorInput').value;
   const size = document.getElementById('ornamentSizeInput').value;
   const shape = document.getElementById('ornamentShapeInput').value;
@@ -886,7 +858,7 @@ async function addOrnament() {
   const x = Math.cos(angle) * radiusAtHeight;
   const z = Math.sin(angle) * radiusAtHeight;
   try {
-    await room.collection('ornaments').create({
+    storage.addOrnament({
       color: color,
       size: parseFloat(size),
       shape: shape,
@@ -896,6 +868,7 @@ async function addOrnament() {
         z
       }
     });
+    updateOrnamentsDisplay(storage.getOrnaments());
   } catch (error) {
     console.error('Error saving ornament:', error);
     alert('Failed to save ornament. Please try again.');
@@ -911,7 +884,6 @@ function updateOrnamentsDisplay(ornaments) {
     renderOrnament(ornament);
   });
 }
-room.collection('ornaments').subscribe(updateOrnamentsDisplay);
 
 // GPS Location Management
 function initializeTreeLocation() {
@@ -1016,7 +988,7 @@ function setFilter(filter) {
   });
   updatePresentsUI();
 }
-setupPeriodicPresentsCheck();
+setupInitialDisplays();
 
 // Initialize GPS-based tree placement
 setTimeout(initializeTreeLocation, 1000);
