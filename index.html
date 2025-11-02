@@ -2,7 +2,7 @@
 <title>AR Christmas Tree</title>
 <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/aframe-gps-camera@1.0.0/dist/aframe-gps-camera.min.js"></script>
-<script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+<script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
 <style>
     .arjs-loader {
         height: 100%;
@@ -389,9 +389,9 @@
         <button onclick="addOrnament()">Add Ornament</button>
     </div>
 
-    <a-scene embedded vr-mode-ui="enabled: false" renderer="logarithmicDepthBuffer: true" 
-            gps-camera="gpsMinDistance: 5; gpsTimeInterval: 1000">
-        
+    <a-scene embedded vr-mode-ui="enabled: false" renderer="logarithmicDepthBuffer: true"
+        arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;">
+
         <!-- GPS Entity for Christmas Tree -->
         <a-entity id="treeLocation" gps-entity-place="latitude: 0; longitude: 0; altitude: 0">
             <!-- Christmas Tree -->
@@ -465,7 +465,7 @@
         </a-entity>
 
         <!-- Camera -->
-        <a-camera gps-camera rotation-reader look-controls="enabled: true">
+        <a-camera gps-new-camera="gpsMinDistance: 5" rotation-reader look-controls="enabled: true">
         </a-camera>
     </a-scene>
 
