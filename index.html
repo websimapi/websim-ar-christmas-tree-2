@@ -138,7 +138,7 @@
         </a-entity>
 
         <!-- Camera -->
-        <a-camera gps-new-camera="gpsMinDistance: 5" rotation-reader look-controls="enabled: true">
+        <a-camera gps-camera="minDistance: 5" rotation-reader>
         </a-camera>
     </a-scene>
 
@@ -155,13 +155,9 @@ function initializeTreeLocation() {
                 treeLongitude = position.coords.longitude;
                 
                 const treeLocation = document.getElementById('treeLocation');
-                treeLocation.setAttribute('gps-entity-place', {
-                    latitude: treeLatitude,
-                    longitude: treeLongitude,
-                    altitude: 0
-                });
+                treeLocation.setAttribute('gps-entity-place', `latitude: ${treeLatitude}; longitude: ${treeLongitude};`);
                 
-                document.getElementById('gpsText').textContent = 'Connected';
+                document.getElementById('gpsText').textContent = 'Acquired';
                 document.getElementById('positionText').textContent = 
                     `${treeLatitude.toFixed(6)}, ${treeLongitude.toFixed(6)}`;
                 
