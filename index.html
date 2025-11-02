@@ -1,0 +1,943 @@
+<html><head><base href=".">
+<title>AR Christmas Tree</title>
+<script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/aframe-gps-camera@1.0.0/dist/aframe-gps-camera.min.js"></script>
+<script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+<style>
+    .arjs-loader {
+        height: 100%;
+        width: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        background-color: rgba(0, 0, 0, 0.8);
+        z-index: 9999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .arjs-loader div {
+        text-align: center;
+        font-size: 1.25em;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .arjs-loader.hidden {
+        display: none;
+    }
+
+    .present-form {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        background-color: rgba(0,0,0,0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;  
+        z-index: 1000;
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+
+    .present-form input {
+        margin: 5px;
+        padding: 5px;
+        border-radius: 3px;
+        border: 1px solid white;
+        background: rgba(255,255,255,0.9);
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .present-form select {
+        margin: 5px;
+        padding: 5px;
+        border-radius: 3px;
+        border: 1px solid white;
+        background: rgba(255,255,255,0.9);
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .present-form input[type="color"] {
+        width: 50px;
+        min-width: 50px;
+        height: 38px;
+        padding: 2px;
+        border: 1px solid white;
+        border-radius: 3px;
+        background: rgba(255,255,255,0.9);
+        cursor: pointer;
+    }
+
+    .present-form input[type="color"]:hover {
+        opacity: 0.9;
+    }
+
+    .present-form button {
+        margin: 5px;
+        padding: 5px 10px;
+        border-radius: 3px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+        width: 100%;
+    }
+
+    .clickable {
+        cursor: pointer;
+    }
+
+    .clickable:hover {
+        opacity: 0.8;
+    }
+
+    .presents-ui {
+        position: fixed;
+        bottom: 280px;  
+        left: 10px;
+        right: 10px;
+        background-color: rgba(0,0,0,0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;  
+        z-index: 999;  
+        max-height: calc(70vh - 380px);  
+        overflow-y: auto;
+    }
+
+    .tabs {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 10px;
+    }
+
+    .tab {
+        flex: 1;
+        padding: 8px;
+        font-size: 14px;
+        white-space: nowrap;
+        background: transparent;
+        border: none;
+        color: white;
+        cursor: pointer;
+    }
+
+    .tab.active {
+        background: #4CAF50;
+    }
+
+    .tab:hover {
+        background: rgba(76, 175, 80, 0.5);
+    }
+
+    .present-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .present-item {
+        padding: 8px;
+        margin-bottom: 5px;
+    }
+
+    .present-info {
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    .open-button {
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+
+    .open-button:disabled {
+        background: #808080;
+        cursor: not-allowed;
+    }
+
+    .open-button[disabled]:hover::after {
+        content: attr(title);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 5px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        border-radius: 3px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.8);
+        z-index: 2000;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        max-width: 90vw;
+        max-height: 90vh;
+        overflow: auto;
+    }
+
+    .modal iframe {
+        width: 100%;
+        height: 70vh;
+        border: none;
+    }
+
+    [style*="Show the Hiro marker"] {
+        display: none;
+    }
+
+    .refresh-button {
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 8px;
+        border-radius: 3px;
+        cursor: pointer;
+        margin-left: auto;
+    }
+
+    .refresh-button:hover {
+        background: #45a049;
+    }
+
+    .reopen-button {
+        background: #2196F3;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        margin-top: 5px;
+    }
+
+    .reopen-button:hover {
+        background: #1976D2;
+    }
+
+    .hiro-button {
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1em;
+        text-decoration: none;
+    }
+
+    .hiro-button:hover {
+        background: #45a049;
+    }
+
+    @media (max-width: 480px) {
+        .present-form {
+            flex-direction: column;
+            gap: 5px;
+            padding: 5px;
+            bottom: 10px;
+        }
+        
+        .present-form input,
+        .present-form select,
+        .present-form button {
+            width: 100%;
+            margin: 2px 0;
+        }
+        
+        .presents-ui {
+            bottom: 430px;  
+            max-height: calc(70vh - 430px);
+        }
+    }
+
+    .color-input-container {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin: 5px;
+    }
+
+    .color-label {
+        color: white;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .ornaments-form {
+        position: fixed;
+        bottom: 200px; 
+        left: 10px;
+        right: 10px;
+        background-color: rgba(0,0,0,0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;  
+        z-index: 1000;
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+
+    @media (max-width: 480px) {
+        .ornaments-form {
+            bottom: 280px; 
+        }
+    }
+
+    .gps-status {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        z-index: 1000;
+        font-size: 14px;
+    }
+</style>
+</head>
+
+<body style="margin: 0px; overflow: hidden;">
+    <audio id="christmasMusic" loop autoplay>
+        <source src="1-5. Christmas Time Is Here (Instrumental).mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="arjs-loader">
+        <div>
+            Loading GPS-based AR Christmas Tree...
+            <div style="font-size: 0.8em; margin-top: 10px;">
+                Please allow location access to place the tree
+            </div>
+        </div>
+    </div>
+
+    <div class="gps-status" id="gpsStatus">
+        <div>🛰️ GPS Status: <span id="gpsText">Acquiring...</span></div>
+        <div>📍 Position: <span id="positionText">Unknown</span></div>
+    </div>
+
+    <div class="present-form" style="display:none">
+        <input type="text" id="toInput" placeholder="To">
+        <input type="text" id="messageInput" placeholder="Message or URL">
+        <select id="openDateInput">
+            <option value="anytime">Can open anytime</option>
+            <option value="24">Can open December 24th</option>
+            <option value="25">Can open December 25th</option>
+        </select>
+        <div class="color-input-container">
+            <span class="color-label">Box:</span>
+            <input type="color" id="boxColorInput" value="#ff0000">
+        </div>
+        <div class="color-input-container">
+            <span class="color-label">Ribbon:</span>
+            <input type="color" id="ribbonColorInput" value="#ffffff">
+        </div>
+        <button onclick="addPresent()">Add Present</button>
+    </div>
+
+    <div class="ornaments-form" style="display:none">
+        <div class="color-input-container">
+            <span class="color-label">Ornament:</span>
+            <input type="color" id="ornamentColorInput" value="#ff0000">
+        </div>
+        <select id="ornamentSizeInput">
+            <option value="0.08">Small</option>
+            <option value="0.12">Medium</option>
+            <option value="0.15">Large</option>
+        </select>
+        <select id="ornamentShapeInput">
+            <option value="sphere">Sphere</option>
+            <option value="box">Cube</option>
+            <option value="cone">Cone</option>
+            <option value="tetrahedron">Tetrahedron</option>
+        </select>
+        <select id="ornamentLayerInput">
+            <option value="1">Bottom Layer</option>
+            <option value="2">Middle Layer</option>
+            <option value="3">Top Layer</option>
+        </select>
+        <button onclick="addOrnament()">Add Ornament</button>
+    </div>
+
+    <a-scene embedded vr-mode-ui="enabled: false" renderer="logarithmicDepthBuffer: true" 
+            gps-camera="gpsMinDistance: 5; gpsTimeInterval: 1000">
+        
+        <!-- GPS Entity for Christmas Tree -->
+        <a-entity id="treeLocation" gps-entity-place="latitude: 0; longitude: 0; altitude: 0">
+            <!-- Christmas Tree -->
+            <a-entity position="0 0 0">
+                <!-- Snow Pile -->
+                <a-entity position="0 -1 0">
+                    <a-sphere position="0 0 0" radius="4" scale="1 0.15 1" color="#ffffff"></a-sphere>
+                    <a-sphere position="3 0.1 2.5" radius="2" scale="1 0.12 1" color="#ffffff"></a-sphere>
+                    <a-sphere position="-2.8 0.08 -2.2" radius="2.2" scale="1 0.1 1" color="#ffffff"></a-sphere>
+                    <a-sphere position="2.2 0.05 -3" radius="1.8" scale="1 0.08 1" color="#ffffff"></a-sphere>
+                    <a-sphere position="-3.2 0.07 1.8" radius="2" scale="1 0.11 1" color="#ffffff"></a-sphere>
+                    <a-sphere position="1.8 0.06 2.8" radius="1.7" scale="1 0.09 1" color="#ffffff"></a-sphere>
+                    <a-sphere position="3.5 0.03 -1.5" radius="1.6" scale="1 0.07 1" color="#f0f0f0"></a-sphere>
+                    <a-sphere position="-3.2 0.04 2.2" radius="1.8" scale="1 0.06 1" color="#f8f8f8"></a-sphere>
+                    <a-sphere position="2.8 0.05 3.2" radius="1.5" scale="1 0.08 1" color="#f5f5f5"></a-sphere>
+                    <a-sphere position="-2.5 0.06 -3.5" radius="1.7" scale="1 0.07 1" color="#f2f2f2"></a-sphere>
+                </a-entity>
+
+                <!-- Tree Trunk -->
+                <a-cylinder position="0 0 0" radius="0.2" height="1" color="#8B4513"></a-cylinder>
+                
+                <!-- Tree Layers -->
+                <a-cone position="0 1.5 0" radius-bottom="1.6" radius-top="0" height="2" color="#2d5a27">
+                    <a-animation attribute="rotation" dur="3000" to="0 360 0" repeat="indefinite" easing="linear"></a-animation>
+                </a-cone>
+                <a-cone position="0 2.5 0" radius-bottom="1.2" radius-top="0" height="1.6" color="#387c2f">
+                    <a-animation attribute="rotation" dur="3000" to="0 -360 0" repeat="indefinite" easing="linear"></a-animation>
+                </a-cone>
+                <a-cone position="0 3.3 0" radius-bottom="0.8" radius-top="0" height="1.2" color="#2d5a27">
+                    <a-animation attribute="rotation" dur="3000" to="0 360 0" repeat="indefinite" easing="linear"></a-animation>
+                </a-cone>
+
+                <!-- Custom W Star on top -->
+                <a-entity position="0 4 0">
+                    <a-entity position="0 0 0" scale="0.3 0.3 0.3">
+                        <!-- W letter made from boxes -->
+                        <a-entity position="0 0 0">
+                            <!-- Left stroke -->
+                            <a-box position="-0.4 0 0" width="0.2" height="1" depth="0.2" material="color: #FFD700">
+                            </a-box>
+                            
+                            <!-- Left-middle stroke -->
+                            <a-box position="-0.1 -0.3 0" width="0.2" height="0.7" depth="0.2" rotation="0 0 30" material="color: #40E0D0">
+                            </a-box>
+                            
+                            <!-- Right-middle stroke -->
+                            <a-box position="0.1 -0.3 0" width="0.2" height="0.7" depth="0.2" rotation="0 0 -30" material="color: #4169E1">
+                            </a-box>
+                            
+                            <!-- Right stroke -->
+                            <a-box position="0.4 0 0" width="0.2" height="1" depth="0.2" material="color: #FF69B4">
+                            </a-box>
+
+                            <a-animation attribute="rotation" dur="5000" to="0 360 0" repeat="indefinite" easing="linear">
+                            </a-animation>
+                            <a-animation attribute="position" dur="1000" direction="alternate" to="0 0.2 0" repeat="indefinite">
+                            </a-animation>
+                        </a-entity>
+                    </a-entity>
+                </a-entity>
+
+                <!-- Ornaments Container -->
+                <a-entity id="ornamentsContainer" position="0 0 0"></a-entity>
+
+                <!-- Presents Container -->
+                <a-entity id="presentsContainer" position="0 0 0"></a-entity>
+
+                <!-- Snow Particles -->
+                <a-entity id="snowContainer"></a-entity>
+            </a-entity>
+        </a-entity>
+
+        <!-- Camera -->
+        <a-camera gps-camera rotation-reader look-controls="enabled: true">
+        </a-camera>
+    </a-scene>
+
+    <div class="presents-ui" style="display:none" id="presentsUI">
+        <div class="tabs">
+            <button class="tab active" onclick="setFilter(&apos;all&apos;)">All Presents</button>
+            <button class="tab" onclick="setFilter(&apos;openable&apos;)">Openable Presents</button>
+            <button class="refresh-button" onclick="refreshPresents()">
+                Refresh Presents
+            </button>
+        </div>
+        <div id="sentPresents" class="present-list">
+            <!-- Presents will be populated here -->
+        </div>
+    </div>
+
+    <div class="modal" id="presentModal">
+        <div class="modal-content">
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>const room = new WebsimSocket();
+let treeLatitude = null;
+let treeLongitude = null;
+
+async function addPresent() {
+  const toValue = document.getElementById('toInput').value.toLowerCase();
+  const messageValue = document.getElementById('messageInput').value;
+  const openDateValue = document.getElementById('openDateInput').value;
+  const boxColor = document.getElementById('boxColorInput').value;
+  const ribbonColor = document.getElementById('ribbonColorInput').value;
+  if (!toValue) {
+    alert('Please fill in the To field');
+    return;
+  }
+  const fromValue = room.party.client.username.toLowerCase();
+  const angle = Math.random() * Math.PI * 2;
+  const radius = Math.random() * 2.5 + 1.5;
+  const x = Math.cos(angle) * radius;
+  const z = Math.sin(angle) * radius;
+  const size = {
+    width: Math.random() * 0.3 + 0.2,
+    height: Math.random() * 0.3 + 0.2,
+    depth: Math.random() * 0.3 + 0.2
+  };
+  try {
+    await room.collection('presents').create({
+      fromPerson: fromValue,
+      toPerson: toValue,
+      message: messageValue,
+      position: {
+        x,
+        z
+      },
+      color: boxColor,
+      ribbonColor: ribbonColor,
+      size: size,
+      opened: false,
+      openDate: openDateValue
+    });
+    document.getElementById('toInput').value = '';
+    document.getElementById('messageInput').value = '';
+    document.getElementById('openDateInput').value = 'anytime';
+    document.getElementById('boxColorInput').value = '#ff0000';
+    document.getElementById('ribbonColorInput').value = '#ffffff';
+  } catch (error) {
+    console.error('Error saving present:', error);
+    alert('Failed to save present. Please try again.');
+  }
+}
+function canOpenPresent(present) {
+  if (present.openDate === 'anytime') return true;
+  const today = new Date();
+  const month = today.getMonth();
+  const date = today.getDate();
+  if (month !== 11) return false;
+  if (present.openDate === '24' && date >= 24) return true;
+  if (present.openDate === '25' && date >= 25) return true;
+  return false;
+}
+function getOpenDateMessage(present) {
+  if (present.openDate === 'anytime') return 'Can open anytime';
+  if (present.openDate === '24') return 'Can open on December 24th';
+  if (present.openDate === '25') return 'Can open on December 25th';
+  return '';
+}
+function renderPresent(present) {
+  const presentsContainer = document.querySelector('#presentsContainer');
+  const presentEntity = document.createElement('a-entity');
+  presentEntity.id = `present-${present.id}`;
+  presentEntity.setAttribute('position', `${present.position.x} -0.8 ${present.position.z}`);
+  const box = document.createElement('a-box');
+  box.setAttribute('width', present.size.width);
+  box.setAttribute('height', present.size.height);
+  box.setAttribute('depth', present.size.depth);
+  box.setAttribute('color', present.color);
+  box.setAttribute('position', `0 ${present.size.height / 2} 0`);
+  if (present.toPerson === room.party.client.username) {
+    box.setAttribute('class', 'clickable');
+    if (!present.opened && !canOpenPresent(present)) {
+      box.setAttribute('title', getOpenDateMessage(present));
+      box.setAttribute('opacity', '0.7');
+    } else {
+      box.addEventListener('click', () => openPresent(present));
+    }
+  }
+  if (present.opened) {
+    box.setAttribute('opacity', '0.5');
+    const messageText = document.createElement('a-text');
+    messageText.setAttribute('value', present.message.includes('websim.ai') ? 'Click to visit URL' : present.message);
+    messageText.setAttribute('position', `0 ${present.size.height + 0.2} 0`);
+    messageText.setAttribute('align', 'center');
+    messageText.setAttribute('scale', '0.5 0.5 0.5');
+    messageText.setAttribute('color', 'white');
+    messageText.setAttribute('look-at', '[camera]');
+    if (present.message.includes('websim.ai')) {
+      messageText.addEventListener('click', () => {
+        window.open(present.message, '_blank');
+      });
+    }
+    presentEntity.appendChild(messageText);
+  }
+  const textFrom = document.createElement('a-text');
+  textFrom.setAttribute('value', `From: ${present.fromPerson}`);
+  textFrom.setAttribute('position', `${present.size.width / 2 + 0.1} ${present.size.height / 2} 0`);
+  textFrom.setAttribute('scale', '0.5 0.5 0.5');
+  textFrom.setAttribute('color', 'white');
+  textFrom.setAttribute('look-at', '[camera]');
+  const textTo = document.createElement('a-text');
+  textTo.setAttribute('value', `To: ${present.toPerson}`);
+  textTo.setAttribute('position', `${present.size.width / 2 + 0.1} ${present.size.height / 2 - 0.15} 0`);
+  textTo.setAttribute('scale', '0.5 0.5 0.5');
+  textTo.setAttribute('color', 'white');
+  textTo.setAttribute('look-at', '[camera]');
+  const ribbon1 = document.createElement('a-box');
+  ribbon1.setAttribute('width', present.size.width + 0.02);
+  ribbon1.setAttribute('height', 0.05);
+  ribbon1.setAttribute('depth', 0.05);
+  ribbon1.setAttribute('position', `0 ${present.size.height} 0`);
+  ribbon1.setAttribute('color', present.ribbonColor || '#ffffff');
+  const ribbon2 = document.createElement('a-box');
+  ribbon2.setAttribute('width', 0.05);
+  ribbon2.setAttribute('height', 0.05);
+  ribbon2.setAttribute('depth', present.size.depth + 0.02);
+  ribbon2.setAttribute('position', `0 ${present.size.height} 0`);
+  ribbon2.setAttribute('color', present.ribbonColor || '#ffffff');
+  presentEntity.appendChild(box);
+  presentEntity.appendChild(textFrom);
+  presentEntity.appendChild(textTo);
+  presentEntity.appendChild(ribbon1);
+  presentEntity.appendChild(ribbon2);
+  presentsContainer.appendChild(presentEntity);
+}
+function updatePresentsDisplay(presents) {
+  if (!presents) return;
+  const presentsContainer = document.querySelector('#presentsContainer');
+  while (presentsContainer.firstChild) {
+    presentsContainer.removeChild(presentsContainer.firstChild);
+  }
+  presents.forEach(present => {
+    renderPresent(present);
+  });
+}
+function isValidUrl(string) {
+  try {
+    new URL(string);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+async function openPresent(present) {
+  if (present.toPerson.toLowerCase() !== room.party.client.username.toLowerCase()) return;
+  try {
+    await room.collection('presents').update(present.id, {
+      ...present,
+      opened: true
+    });
+    if (isValidUrl(present.message)) {
+      window.open(present.message, '_blank');
+    }
+  } catch (error) {
+    console.error('Error opening present:', error);
+    alert('Failed to open present. Please try again.');
+  }
+}
+function updatePresentsUI() {
+  const sentContainer = document.getElementById('sentPresents');
+  sentContainer.innerHTML = '';
+  const presents = room.collection('presents').getList() || [];
+  const filteredPresents = presents.filter(present => {
+    if (currentFilter === 'openable') {
+      return present.toPerson.toLowerCase() === room.party.client.username.toLowerCase() && (canOpenPresent(present) && !present.opened || present.opened);
+    }
+    return true;
+  });
+  filteredPresents.forEach(present => {
+    const presentElement = createPresentListItem(present);
+    sentContainer.appendChild(presentElement);
+  });
+  if (!filteredPresents || filteredPresents.length === 0) {
+    sentContainer.innerHTML = '<div style="text-align: center; padding: 10px;">No presents yet!</div>';
+  }
+}
+function createPresentListItem(present) {
+  const div = document.createElement('div');
+  div.className = 'present-item';
+  const info = document.createElement('div');
+  info.className = 'present-info';
+  info.innerHTML = `
+                <div><strong>From:</strong> ${present.fromPerson.toLowerCase()}</div>
+                <div><strong>To:</strong> ${present.toPerson.toLowerCase()}</div>
+                <div><strong>Status:</strong> ${present.opened ? 'Opened' : 'Unopened'}</div>
+                <div><strong>Opens:</strong> ${getOpenDateMessage(present)}</div>
+            `;
+  div.appendChild(info);
+  if (present.toPerson.toLowerCase() === room.party.client.username.toLowerCase()) {
+    if (!present.opened) {
+      const openButton = document.createElement('button');
+      openButton.className = 'open-button';
+      openButton.textContent = 'Open Present';
+      if (!canOpenPresent(present)) {
+        openButton.disabled = true;
+        openButton.style.opacity = '0.5';
+        openButton.style.cursor = 'not-allowed';
+        openButton.title = `This present can only be opened ${getOpenDateMessage(present)}`;
+      } else {
+        openButton.onclick = () => openPresentAnimation(present);
+      }
+      div.appendChild(openButton);
+    } else {
+      const reopenButton = document.createElement('button');
+      reopenButton.className = 'reopen-button';
+      reopenButton.textContent = 'Re-Open Present';
+      reopenButton.onclick = () => openPresentAnimation(present);
+      div.appendChild(reopenButton);
+    }
+  }
+  return div;
+}
+function openPresentAnimation(present) {
+  const presentEntity = document.querySelector(`#present-${present.id}`);
+  if (!presentEntity) return;
+  const originalPosition = presentEntity.getAttribute('position');
+  presentEntity.setAttribute('animation', {
+    property: 'position',
+    to: '0 1 0',
+    dur: 1000,
+    easing: 'easeInOutQuad'
+  });
+  setTimeout(() => {
+    const modal = document.getElementById('presentModal');
+    const modalContent = document.getElementById('modalContent');
+    if (isValidUrl(present.message) && present.message.includes('websim.ai')) {
+      modalContent.innerHTML = `<iframe src="${present.message}"></iframe>`;
+    } else {
+      modalContent.innerHTML = `<h2>Message:</h2><p>${present.message}</p>`;
+    }
+    modal.style.display = 'flex';
+    modal.onclick = e => {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+        presentEntity.setAttribute('animation', {
+          property: 'position',
+          to: `${originalPosition.x} ${originalPosition.y} ${originalPosition.z}`,
+          dur: 1000,
+          easing: 'easeInOutQuad'
+        });
+      }
+    };
+    if (!present.opened) {
+      openPresent(present);
+    }
+  }, 1000);
+}
+function setupPeriodicPresentsCheck() {
+  const presents = room.collection('presents').getList() || [];
+  updatePresentsDisplay(presents);
+  updatePresentsUI();
+}
+function refreshPresents() {
+  const presents = room.collection('presents').getList() || [];
+  updatePresentsDisplay(presents);
+  updatePresentsUI();
+}
+room.collection('presents').subscribe(updatePresentsDisplay);
+room.collection('presents').subscribe(updatePresentsUI);
+function renderOrnament(ornament) {
+  const ornamentsContainer = document.querySelector('#ornamentsContainer');
+  const ornamentEntity = document.createElement(`a-${ornament.shape || 'sphere'}`);
+  if (ornament.shape === 'sphere') {
+    ornamentEntity.setAttribute('radius', ornament.size);
+  } else if (ornament.shape === 'box') {
+    ornamentEntity.setAttribute('width', ornament.size * 2);
+    ornamentEntity.setAttribute('height', ornament.size * 2);
+    ornamentEntity.setAttribute('depth', ornament.size * 2);
+  } else if (ornament.shape === 'cone') {
+    ornamentEntity.setAttribute('radius-bottom', ornament.size);
+    ornamentEntity.setAttribute('radius-top', '0');
+    ornamentEntity.setAttribute('height', ornament.size * 2);
+  } else if (ornament.shape === 'tetrahedron') {
+    ornamentEntity.setAttribute('radius', ornament.size);
+    ornamentEntity.setAttribute('segments-height', '1');
+    ornamentEntity.setAttribute('segments-radial', '3');
+  }
+  ornamentEntity.setAttribute('color', ornament.color);
+  ornamentEntity.setAttribute('position', `${ornament.position.x} ${ornament.position.y} ${ornament.position.z}`);
+  ornamentsContainer.appendChild(ornamentEntity);
+}
+async function addOrnament() {
+  const color = document.getElementById('ornamentColorInput').value;
+  const size = document.getElementById('ornamentSizeInput').value;
+  const shape = document.getElementById('ornamentShapeInput').value;
+  const layer = parseInt(document.getElementById('ornamentLayerInput').value);
+  let maxHeight, minHeight, baseRadius;
+  switch (layer) {
+    case 1:
+      maxHeight = 2.0;
+      minHeight = 1.0;
+      baseRadius = 1.6;
+      break;
+    case 2:
+      maxHeight = 2.8;
+      minHeight = 2.0;
+      baseRadius = 1.2;
+      break;
+    case 3:
+      maxHeight = 3.3;
+      minHeight = 2.8;
+      baseRadius = 0.8;
+      break;
+  }
+  const height = Math.random() * (maxHeight - minHeight) + minHeight;
+  const radiusAtHeight = baseRadius * (1 - (height - minHeight) / (maxHeight - minHeight));
+  const angle = Math.random() * Math.PI * 2;
+  const x = Math.cos(angle) * radiusAtHeight;
+  const z = Math.sin(angle) * radiusAtHeight;
+  try {
+    await room.collection('ornaments').create({
+      color: color,
+      size: parseFloat(size),
+      shape: shape,
+      position: {
+        x,
+        y: height,
+        z
+      }
+    });
+  } catch (error) {
+    console.error('Error saving ornament:', error);
+    alert('Failed to save ornament. Please try again.');
+  }
+}
+function updateOrnamentsDisplay(ornaments) {
+  if (!ornaments) return;
+  const ornamentsContainer = document.querySelector('#ornamentsContainer');
+  while (ornamentsContainer.firstChild) {
+    ornamentsContainer.removeChild(ornamentsContainer.firstChild);
+  }
+  ornaments.forEach(ornament => {
+    renderOrnament(ornament);
+  });
+}
+room.collection('ornaments').subscribe(updateOrnamentsDisplay);
+
+// GPS Location Management
+function initializeTreeLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                treeLatitude = position.coords.latitude;
+                treeLongitude = position.coords.longitude;
+                
+                const treeLocation = document.getElementById('treeLocation');
+                treeLocation.setAttribute('gps-entity-place', {
+                    latitude: treeLatitude,
+                    longitude: treeLongitude,
+                    altitude: 0
+                });
+                
+                document.getElementById('gpsText').textContent = 'Connected';
+                document.getElementById('positionText').textContent = 
+                    `${treeLatitude.toFixed(6)}, ${treeLongitude.toFixed(6)}`;
+                
+                // Hide loader when GPS is acquired
+                document.querySelector('.arjs-loader').classList.add('hidden');
+                document.getElementById('presentsUI').style.display = 'block';
+                document.querySelector('.present-form').style.display = 'flex';
+                document.querySelector('.ornaments-form').style.display = 'flex';
+            },
+            (error) => {
+                console.error('GPS Error:', error);
+                document.getElementById('gpsText').textContent = 'Error';
+                document.getElementById('positionText').textContent = 'Location access denied';
+                
+                // Fallback to default position if GPS fails
+                document.querySelector('.arjs-loader').classList.add('hidden');
+                document.getElementById('presentsUI').style.display = 'block';
+                document.querySelector('.present-form').style.display = 'flex';
+                document.querySelector('.ornaments-form').style.display = 'flex';
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 300000
+            }
+        );
+    } else {
+        document.getElementById('gpsText').textContent = 'Not supported';
+        document.getElementById('positionText').textContent = 'Geolocation not supported';
+        
+        // Fallback to default position
+        document.querySelector('.arjs-loader').classList.add('hidden');
+        document.getElementById('presentsUI').style.display = 'block';
+        document.querySelector('.present-form').style.display = 'flex';
+        document.querySelector('.ornaments-form').style.display = 'flex';
+    }
+}
+
+const snowContainer = document.getElementById('snowContainer');
+const snowflakeCount = 50;
+let snowflakes = [];
+for (let i = 0; i < snowflakeCount; i++) {
+  const snowflake = document.createElement('a-sphere');
+  snowflake.setAttribute('radius', '0.03');
+  snowflake.setAttribute('color', '#ffffff');
+  snowflake.setAttribute('opacity', '0.8');
+  const x = (Math.random() - 0.5) * 4;
+  const y = Math.random() * 5 + 5;
+  const z = (Math.random() - 0.5) * 4;
+  snowflake.setAttribute('position', `${x} ${y} ${z}`);
+  snowContainer.appendChild(snowflake);
+  snowflakes.push({
+    element: snowflake,
+    velocity: Math.random() * 0.01 + 0.01,
+    wobble: Math.random() * 0.01
+  });
+}
+function animateSnow() {
+  snowflakes.forEach(snowflake => {
+    const pos = snowflake.element.getAttribute('position');
+    pos.y -= snowflake.velocity;
+    pos.x += Math.sin(Date.now() * 0.001) * snowflake.wobble;
+    if (pos.y < 0) {
+      pos.y = 5 + Math.random() * 2;
+      pos.x = (Math.random() - 0.5) * 4;
+      pos.z = (Math.random() - 0.5) * 4;
+    }
+    snowflake.element.setAttribute('position', pos);
+  });
+  requestAnimationFrame(animateSnow);
+}
+animateSnow();
+window.addEventListener('click', () => {
+  document.getElementById('christmasMusic').play();
+});
+let currentFilter = 'all';
+function setFilter(filter) {
+  currentFilter = filter;
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach(tab => {
+    tab.classList.remove('active');
+    if (tab.textContent.toLowerCase().includes(filter)) {
+      tab.classList.add('active');
+    }
+  });
+  updatePresentsUI();
+}
+setupPeriodicPresentsCheck();
+
+// Initialize GPS-based tree placement
+setTimeout(initializeTreeLocation, 1000);</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body></html>
